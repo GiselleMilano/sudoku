@@ -51,11 +51,11 @@ def make_blocks(board):
 
     return [new_block_0, new_block_1, new_block_2]
 
-# Put into each row the Models objects instances
-def make_board_row(row_aux, row_index):
+# Put into each row the Models objects instances and blocks
+def make_board_row(blocks, row_index):
     new_blocks = []
 
-    for index_block, block_aux in enumerate(row_aux):
+    for index_block, block_aux in enumerate(blocks):
         lines_obj_for_block = []
         
         for index_line, line_aux in enumerate(block_aux):
@@ -146,7 +146,7 @@ def validate_digit(string):
     patron = r'^[0-9]$'
     return re.match(patron, string)
 
-def get_cells_by_block(row_index, block_index, board):
+def get_cells_block(row_index, block_index, board):
     cells = []
 
     for row in board:
@@ -155,10 +155,7 @@ def get_cells_by_block(row_index, block_index, board):
                 if block.block_index == block_index:
                     for line in block.lines:
                         for cell in line.cells:
-                            if cell.start_value == 0:
-                                cells.append(cell.user_value)
-                            else:
-                                cells.append(cell.start_value)
+                            cells.append(get_cell_value(cell.start_value, cell.user_value))
     return cells
 
 def get_cells_horizontal(row_index, line_index, board):
@@ -170,10 +167,7 @@ def get_cells_horizontal(row_index, line_index, board):
                 for line in block.lines:
                     if line.line_index == line_index:
                         for cell in line.cells:
-                            if cell.start_value == 0:
-                                line_cells.append(cell.user_value)
-                            else:
-                                line_cells.append(cell.start_value)
+                            line_cells.append(get_cell_value(cell.start_value, cell.user_value))
     return line_cells
 
 def get_cells_vertical(block_index, cell_index, board):
@@ -185,12 +179,7 @@ def get_cells_vertical(block_index, cell_index, board):
                 for line in block.lines:
                     for cell in line.cells:
                         if cell.cell_index == cell_index:
-                            cell_value = 0
-                            if cell.start_value == 0:
-                                cell_value = cell.user_value
-                            else:
-                                cell_value = cell.start_value
-                            line_cells.append(cell_value)
+                            line_cells.append(get_cell_value(cell.start_value, cell.user_value))
     return line_cells
 
 def is_cell_value_unique(array, value):
@@ -213,7 +202,7 @@ def validate_board(board):
                 for cell in line.cells:
                     cell_value = get_cell_value(cell.start_value, cell.user_value)
 
-                    cells_in_block = get_cells_by_block(row.row_index, block.block_index, board)
+                    cells_in_block = get_cells_block(row.row_index, block.block_index, board)
                     cells_in_horizontal = get_cells_horizontal(row.row_index, line.line_index, board)
                     cells_in_vertical = get_cells_vertical(block.block_index, cell.cell_index, board)
 
@@ -229,12 +218,7 @@ def is_cell_incompleted(board):
         for block in row.blocks:
             for line in block.lines:
                 for cell in line.cells:
-                    cell_value = 0
-                    if cell.start_value == 0:
-                        cell_value = cell.user_value
-                    else:
-                        cell_value = cell.start_value
-                    if cell_value == 0:
+                    if get_cell_value(cell.start_value, cell.user_value) == 0:
                         return True
     return False
 
