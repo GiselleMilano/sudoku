@@ -4,13 +4,13 @@ from pygame.locals import *
 from models import Block, Cell, Line, Row
 from widgets import Done
 
-# Restructure the basic board
-def make_row(array):
+# Make 3 blocks to each board row, each block contains 3 lines and each line contains 9 cells
+def make_blocks(board):
     block_0 = []
     block_1 = []
     block_2 = []
 
-    for row in array:
+    for row in board:
         for index_cell, cell in enumerate(row):
             if index_cell <= 2:
                 block_0.append(cell)
@@ -19,13 +19,11 @@ def make_row(array):
             elif index_cell > 5 and index_cell <= 8:
                 block_2.append(cell)
     
-    blocks = [block_0, block_1, block_2]
-    
     new_block_0 = []
     new_block_1 = []
     new_block_2 = []
 
-    for index_block, block in enumerate(blocks):
+    for index_block, block in enumerate([block_0, block_1, block_2]):
         line_0 = []
         line_1 = []
         line_2 = []
@@ -75,13 +73,9 @@ def make_board_row(row_aux, row_index):
 
     return Row(row_index, new_blocks)
 
-# Divide the basic board in 3 rows and call make_row() to fill the board with the Models
+# Divide the basic board in 3 rows and call make_blocks() to fill the board with the Models
 def convert_to_board(sample):
-    row_0 = make_row([sample[0], sample[1], sample[2]])
-    row_1 = make_row([sample[3], sample[4], sample[5]])
-    row_2 = make_row([sample[6], sample[7], sample[8]])
-    
-    return [make_board_row(row_0, 0), make_board_row(row_1, 1), make_board_row(row_2, 2)]
+    return [make_board_row(make_blocks([sample[0], sample[1], sample[2]]), 0), make_board_row(make_blocks([sample[3], sample[4], sample[5]]), 1), make_board_row(make_blocks([sample[6], sample[7], sample[8]]), 2)]
 
 # All blocks start with the position x = 100
 def get_pos_by_block_index(index):
@@ -128,25 +122,21 @@ def get_pos_by_line_index(index, row_index):
 def draw_board(board, screen, font):
     for row in board:
         for block in row.blocks:
-            # Me dezplazo en el eje X por cada Block
             pos_x_by_block = get_pos_by_block_index(block.block_index)
 
             for line in block.lines:
-                # Me dezplazo en el eje Y por cada Line en relacion a la posicion de Row en Y
                 pos_y_by_line = get_pos_by_line_index(line.line_index, row.row_index)
                 
                 for cell in line.cells:
-                    cell.rect.x = pos_x_by_block + (40 * cell.cell_index) # Me desplazo por x en relación de la posicion del Block en x
+                    cell.rect.x = pos_x_by_block + (40 * cell.cell_index)
                     cell.rect.y = pos_y_by_line
                     
-                    # Dibujo cada celda, si fue seleccionada se rellena de un color sino solo pongo borde
                     if cell.is_selected:
                         pygame.draw.rect(screen, (252, 192, 210), cell.rect)
                         pygame.draw.rect(screen, (0,0,0), cell.rect, 2)
                     else:
                         pygame.draw.rect(screen, (0,0,0), cell.rect, 2)
                     
-                    # Dibuja el texto ingresado en la celda actual
                     if cell.user_value != 0:
                         screen.blit(font.render(str(cell.user_value), True, (209, 13, 91)), (cell.rect.x + 12, cell.rect.y + 8))
                     if cell.start_value != 0:
@@ -209,6 +199,11 @@ def is_cell_value_unique(array, value):
 def get_final_result(validate_results):
     return all(validate_results)
 
+def get_cell_value(start_value, user_value):
+    if start_value == 0:
+        return user_value
+    return start_value
+
 def validate_board(board):
     validate_results = []
 
@@ -216,33 +211,18 @@ def validate_board(board):
         for block in row.blocks:
             for line in block.lines:
                 for cell in line.cells:
-                    cell_value = 0
-                    if cell.start_value == 0:
-                        cell_value = cell.user_value
-                    else:
-                        cell_value = cell.start_value
+                    cell_value = get_cell_value(cell.start_value, cell.user_value)
 
-                    # obtengo todos los valores de las celdas de un bloque
                     cells_in_block = get_cells_by_block(row.row_index, block.block_index, board)
-                    # se fija si el numero es unico en su bloque
-                    rule_1 = is_cell_value_unique(cells_in_block, cell_value)
-
-                    # obtengo todos los valores de las celdas de un eje horizontal
                     cells_in_horizontal = get_cells_horizontal(row.row_index, line.line_index, board)
-                    # se fija si el numero es unico en su horizontal
-                    rule_2 = is_cell_value_unique(cells_in_horizontal, cell_value)
-
-                    # obtengo todos los valores de las celdas de un eje vertical
                     cells_in_vertical = get_cells_vertical(block.block_index, cell.cell_index, board)
-                    # se fija si el numero es unico en su vertical
-                    rule_3 = is_cell_value_unique(cells_in_vertical, cell_value)
 
-                    if (rule_1 and rule_2 and rule_3):
+                    if (is_cell_value_unique(cells_in_block, cell_value) and is_cell_value_unique(cells_in_horizontal, cell_value) and is_cell_value_unique(cells_in_vertical, cell_value)):
                         validate_results.append(True)
                     else:
                         validate_results.append(False)
     
-    return get_final_result(validate_results) # me fijo que solo retorne true si todos los numeros estaban correctos
+    return get_final_result(validate_results)
 
 def is_cell_incompleted(board):
     for row in board:
@@ -264,7 +244,6 @@ def main():
     clock = pygame.time.Clock()
     running = True
 
-    white = (255,255,255)
     font = pygame.font.SysFont('Arial', 25)
     new_text_rect = ""
     done = Done()
@@ -296,11 +275,9 @@ def main():
     board = convert_to_board(sample)
        
     while running:
-        # EVENTS SECTION
         for event in pygame.event.get():
             if event.type == QUIT:
                 running = False
-
             elif event.type == MOUSEBUTTONDOWN:
                 if done.contains(pygame.mouse.get_pos()):
                     done.set_is_selected(done.contains(pygame.mouse.get_pos()))
@@ -311,7 +288,6 @@ def main():
                             done.set_is_win(1)
                         else:
                             done.set_is_win(2)
-                            print("YOU LOSE")
 
                 for row in board:
                     for block in row.blocks:
@@ -319,7 +295,6 @@ def main():
                             for cell in line.cells:
                                 cell.is_selected = cell.contains(pygame.mouse.get_pos())
                                 new_text_rect = ""
-
             elif event.type == KEYDOWN:
                 for row in board:
                     for block in row.blocks:
@@ -330,14 +305,11 @@ def main():
                                         if cell.start_value == 0:
                                             new_text_rect += event.unicode
                                             cell.user_value = int(new_text_rect)
-
-        # DRAWING SECTION
-        screen.fill(white)
+        screen.fill((255,255,255))
         draw_board(board, screen, font)
         done.draw(screen, font)
         done.draw_result(screen, font)
 
-        # OTHER...
         pygame.display.flip()
         clock.tick(60)
         pygame.display.update()
